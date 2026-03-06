@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const client = axios.create({
-  baseURL: '/api',
+  baseURL: 'https://pdi-backend-kappa.vercel.app/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
