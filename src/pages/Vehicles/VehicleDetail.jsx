@@ -120,7 +120,7 @@ export default function VehicleDetail() {
                 <CheckCircle size={16} /> Mark Received
               </button>
             )}
-            {canSales && v.status === 'received' && !v.body_building && (
+            {canSales && ['received', 'in_workshop'].includes(v.status) && !v.body_building && (
               <button onClick={() => openModal('bodyBuilding')} className="btn-secondary">
                 <Package size={16} /> Add Body Building
               </button>
@@ -327,48 +327,14 @@ export default function VehicleDetail() {
         </div>
       </Modal>
 
-      <Modal isOpen={modal === 'addJob'} onClose={closeModal} title="Allocate Workshop Job">
-        <div className="space-y-4">
-          <div>
-            <label className="label">Job Type *</label>
-            <select className="input" onChange={e => setFormData(p => ({ ...p, type: e.target.value }))}>
-              <option value="">Select type...</option>
-              {JOB_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="label">Description</label>
-            <input className="input" placeholder="Details about the job..."
-              onChange={e => setFormData(p => ({ ...p, description: e.target.value }))} />
-          </div>
-          {workshop.length > 0 && (
-            <div>
-              <label className="label">Assign To</label>
-              <select className="input" onChange={e => setFormData(p => ({ ...p, assigned_to: e.target.value }))}>
-                <option value="">Select member...</option>
-                {workshop.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </div>
-          )}
-          <div>
-            <label className="label">ETA *</label>
-            <input type="date" className="input"
-              onChange={e => setFormData(p => ({ ...p, eta: e.target.value }))} />
-          </div>
-          <p className="text-xs text-gray-400 bg-blue-50 rounded-lg p-3 border border-blue-100">
-            Default checklist items for the selected job type will be added automatically.
-          </p>
-          <div className="flex justify-end gap-3">
-            <button onClick={closeModal} className="btn-secondary">Cancel</button>
-            <button disabled={saving} onClick={() => withSave(async () => {
-              if (!formData.type || !formData.eta) { toast.error('Type and ETA are required'); return; }
-              await createJob(v.id, formData);
-              toast.success('Job allocated with checklist');
-            })} className="btn-blue">
-              {saving ? 'Saving…' : 'Allocate Job'}
-            </button>
-          </div>
-        </div>
+      <Modal isOpen={modal === 'addJob'} onClose={closeModal} title="Allocate Workshop Jobs" size="lg">
+        <AllocateJobModal
+          vehicleId={v.id}
+          workshop={workshop}
+          existingJobs={v.jobs || []}
+          onSave={async () => { await load(); closeModal(); }}
+          onClose={closeModal}
+        />
       </Modal>
 
       {/* Job ETA Revision Modal (triggered from JobCard) */}
@@ -783,6 +749,166 @@ function TimelineStage({ icon: Icon, title, subtitle, status, statusLabel, actio
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── AllocateJobModal: multi-job checkbox allocation ─────────────────────────
+function AllocateJobModal({ vehicleId, workshop, existingJobs, onSave, onClose }) {
+  const ALL_TYPES = [
+    { value: 'pdi',         label: 'PDI'                 },
+    { value: 'accessories', label: 'Accessories Fitment' },
+    { value: 'paint',       label: 'Paint Job'           },
+    { value: 'other',       label: 'Other Job'           },
+  ];
+
+  // For each type: find the latest existing job (if any)
+  const existingByType = Object.fromEntries(
+    ALL_TYPES.map(t => [t.value, existingJobs.find(j => j.type === t.value) || null])
+  );
+
+  // PDI is mandatory only if it has never been assigned at all
+  const pdiEverAssigned = !!existingByType['pdi'];
+  const pdiMandatory = !pdiEverAssigned;
+
+  // A type is "locked read-only" if it has an active (non-complete) job
+  const isLocked = (type) => {
+    const j = existingByType[type];
+    return j && j.status !== 'completed';
+  };
+
+  const initialForms = Object.fromEntries(
+    ALL_TYPES.map(t => [t.value, {
+      checked: t.value === 'pdi' && pdiMandatory,
+      eta: '', description: '', assigned_to: '',
+    }])
+  );
+
+  const [forms, setForms] = useState(initialForms);
+  const [saving, setSaving] = useState(false);
+
+  const toggle = (type) => {
+    if (type === 'pdi' && pdiMandatory) return;
+    setForms(p => ({ ...p, [type]: { ...p[type], checked: !p[type].checked } }));
+  };
+
+  const update = (type, field, value) => {
+    setForms(p => ({ ...p, [type]: { ...p[type], [field]: value } }));
+  };
+
+  const handleSubmit = async () => {
+    const toCreate = ALL_TYPES.filter(t => !isLocked(t.value) && forms[t.value].checked);
+    for (const t of toCreate) {
+      if (!forms[t.value].eta) {
+        toast.error(`ETA is required for ${t.label}`);
+        return;
+      }
+    }
+    setSaving(true);
+    try {
+      for (const t of toCreate) {
+        const f = forms[t.value];
+        await createJob(vehicleId, {
+          type: t.value,
+          eta: f.eta,
+          description: f.description || null,
+          assigned_to: f.assigned_to || null,
+        });
+      }
+      toast.success(`${toCreate.length} job(s) allocated`);
+      onSave();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to allocate jobs');
+      setSaving(false);
+    }
+  };
+
+  const checkedCount = ALL_TYPES.filter(t => !isLocked(t.value) && forms[t.value].checked).length;
+
+  return (
+    <div className="space-y-4">
+      {pdiMandatory && (
+        <p className="text-xs text-gray-500 bg-blue-50 rounded-lg p-3 border border-blue-100">
+          PDI is mandatory and pre-selected. Check additional job types to allocate multiple at once.
+        </p>
+      )}
+
+      <div className="space-y-2">
+        {ALL_TYPES.map(t => {
+          const locked = isLocked(t.value);
+          const f = forms[t.value];
+          const isMandatory = t.value === 'pdi' && pdiMandatory;
+
+          // Active (non-complete) job exists → read-only row
+          if (locked) {
+            return (
+              <div key={t.value} className="border border-gray-200 rounded-xl overflow-hidden opacity-60">
+                <div className="flex items-center gap-3 px-4 py-3 bg-gray-50">
+                  <input type="checkbox" checked disabled className="w-4 h-4" />
+                  <span className="text-sm font-semibold text-gray-500">{t.label}</span>
+                  <span className="ml-auto text-xs text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">In Progress</span>
+                </div>
+              </div>
+            );
+          }
+
+          // Available (never assigned, or previously completed) → interactive
+          return (
+            <div key={t.value} className={`border rounded-xl overflow-hidden transition-colors ${f.checked ? 'border-blue-200' : 'border-gray-200'}`}>
+              <label className={`flex items-center gap-3 px-4 py-3 select-none ${isMandatory ? 'cursor-default' : 'cursor-pointer'} ${f.checked ? 'bg-blue-50' : 'bg-gray-50 hover:bg-gray-100'}`}>
+                <input
+                  type="checkbox"
+                  checked={f.checked}
+                  disabled={isMandatory}
+                  onChange={() => toggle(t.value)}
+                  className="w-4 h-4 accent-blue-600"
+                />
+                <span className={`text-sm font-semibold ${f.checked ? 'text-blue-800' : 'text-gray-600'}`}>
+                  {t.label}
+                </span>
+                {isMandatory && <span className="ml-1 text-xs text-blue-500 font-normal">(mandatory)</span>}
+                {existingByType[t.value]?.status === 'completed' && (
+                  <span className="ml-auto text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Done — can redo</span>
+                )}
+              </label>
+
+              {f.checked && (
+                <div className="px-4 py-3 space-y-3 bg-white border-t border-blue-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">Assign To</label>
+                      <select className="input" value={f.assigned_to}
+                        onChange={e => update(t.value, 'assigned_to', e.target.value)}>
+                        <option value="">Select member...</option>
+                        {workshop.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label">ETA *</label>
+                      <input type="date" className="input" value={f.eta}
+                        onChange={e => update(t.value, 'eta', e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Description</label>
+                    <input className="input"
+                      placeholder={`Details about the ${t.label}...`}
+                      value={f.description}
+                      onChange={e => update(t.value, 'description', e.target.value)} />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-end gap-3 pt-1">
+        <button onClick={onClose} className="btn-secondary">Cancel</button>
+        <button disabled={saving} onClick={handleSubmit} className="btn-blue">
+          {saving ? 'Allocating…' : `Allocate ${checkedCount} Job${checkedCount !== 1 ? 's' : ''}`}
+        </button>
       </div>
     </div>
   );
