@@ -10,8 +10,8 @@ import toast from 'react-hot-toast';
 const roleLabels = {
   admin: { label: 'Admin', color: 'bg-purple-100 text-purple-700' },
   sales_admin: { label: 'Sales Manager', color: 'bg-blue-100 text-blue-700' },
-  workshop_supervisor: { label: 'Supervisor', color: 'bg-amber-100 text-amber-700' },
-  workshop_member: { label: 'Workshop Member', color: 'bg-green-100 text-green-700' },
+  workshop_supervisor: { label: 'Workshop Supervisor', color: 'bg-amber-100 text-amber-700' },
+  workshop_member: { label: 'Technician', color: 'bg-green-100 text-green-700' },
 };
 
 export default function Team() {
@@ -108,7 +108,7 @@ export default function Team() {
             <select className="input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
               <option value="sales_admin">Sales Manager</option>
               <option value="workshop_supervisor">Workshop Supervisor</option>
-              <option value="workshop_member">Workshop Member</option>
+              <option value="workshop_member">Technician</option>
               <option value="admin">Admin</option>
             </select>
           </div>

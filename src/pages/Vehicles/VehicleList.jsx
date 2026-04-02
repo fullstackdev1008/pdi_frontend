@@ -13,13 +13,14 @@ import { format } from 'date-fns';
 import VehicleForm from './VehicleForm';
 
 const STATUS_TABS = [
-  { key: 'all',          label: 'All' },
-  { key: 'expected',     label: 'Expected' },
-  { key: 'received',     label: 'Received' },
-  { key: 'body_building',label: 'Body Building' },
-  { key: 'in_workshop',  label: 'In Workshop' },
-  { key: 'ready',        label: 'Ready' },
-  { key: 'delivered',    label: 'Delivered' },
+  { key: 'all',                label: 'All' },
+  { key: 'expected',           label: 'Expected' },
+  { key: 'received',           label: 'Received' },
+  { key: 'body_building',      label: 'Body Building' },
+  { key: 'in_workshop',        label: 'In Workshop' },
+  { key: 'rework',             label: 'Rework' },
+  { key: 'ready',              label: 'Ready' },
+  { key: 'delivered',          label: 'Delivered' },
 ];
 
 export default function VehicleList() {
@@ -39,6 +40,7 @@ export default function VehicleList() {
   const dateFilter = searchParams.get('date') || '';
   const page = parseInt(searchParams.get('page') || '1');
 
+  const canAdd = user?.role === 'admin';
   const canManage = ['sales_admin', 'admin'].includes(user?.role);
   const canDelete = user?.role === 'admin';
 
@@ -110,7 +112,7 @@ export default function VehicleList() {
                 <Search size={16} /> Search
               </button>
             </form>
-            {canManage && (
+            {canAdd && (
               <button onClick={() => { setEditVehicle(null); setShowForm(true); }} className="btn-blue whitespace-nowrap">
                 <Plus size={16} /> <span className="hidden sm:inline">Add New Vehicle</span>
               </button>

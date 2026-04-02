@@ -31,8 +31,8 @@ export default function Login() {
   const demoLogins = [
     { label: 'Admin', email: 'admin@pdi.com',  password: 'Admin@123',   color: 'bg-purple-100 text-purple-700' },
     { label: 'Sales', email: 'sales@pdi.com',  password: 'Sales@123',   color: 'bg-blue-100 text-blue-700' },
-    { label: 'Supervisor', email: 'super@pdi.com', password: 'Super@123', color: 'bg-amber-100 text-amber-700' },
-    { label: 'Member', email: 'priya@pdi.com', password: 'Member@123',  color: 'bg-green-100 text-green-700' },
+    { label: 'Workshop Supervisor', email: 'super@pdi.com', password: 'Super@123', color: 'bg-amber-100 text-amber-700' },
+    { label: 'Technician', email: 'priya@pdi.com', password: 'Member@123',  color: 'bg-green-100 text-green-700' },
   ];
 
   return (

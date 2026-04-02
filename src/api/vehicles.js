@@ -8,6 +8,8 @@ export const deleteVehicle = (id) => client.delete(`/vehicles/${id}`);
 
 export const addVehicleEta = (id, data) => client.post(`/vehicles/${id}/eta`, data);
 export const receiveVehicle = (id, data) => client.put(`/vehicles/${id}/receive`, data);
+export const acceptVehicle = (id) => client.put(`/vehicles/${id}/accept`);
+export const rejectVehicle = (id, data) => client.put(`/vehicles/${id}/reject`, data);
 export const deliverVehicle = (id) => client.put(`/vehicles/${id}/deliver`);
 
 export const addBodyBuilding = (id, data) => client.post(`/vehicles/${id}/body-building`, data);

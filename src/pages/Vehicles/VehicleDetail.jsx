@@ -10,6 +10,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 import {
   getVehicle, receiveVehicle, deliverVehicle,
+  acceptVehicle, rejectVehicle,
   addVehicleEta, addBodyBuilding, addBodyBuildingEta, completeBodyBuilding,
   createJob, completeJob, addJobEta,
   addChecklistItem, toggleChecklistItem, deleteChecklistItem
@@ -120,10 +121,24 @@ export default function VehicleDetail() {
                 <CheckCircle size={16} /> Mark Received
               </button>
             )}
-            {canSales && ['received', 'in_workshop'].includes(v.status) && !v.body_building && (
+            {canSales && ['received', 'in_workshop'].includes(v.status) && !v.body_building && !v.workflow_state && (
               <button onClick={() => openModal('bodyBuilding')} className="btn-secondary">
                 <Package size={16} /> Add Body Building
               </button>
+            )}
+            {/* Accept / Reject — shown when all jobs done, awaiting sales approval */}
+            {canSales && ds.label === 'Pending Acceptance' && (
+              <>
+                <button onClick={() => withSave(async () => {
+                  await acceptVehicle(v.id);
+                  toast.success('Vehicle accepted — marked Ready!');
+                })} className="btn-primary">
+                  <CheckCircle size={16} /> Accept
+                </button>
+                <button onClick={() => openModal('reject')} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-all shadow-sm">
+                  <X size={16} /> Reject
+                </button>
+              </>
             )}
             {canSales && v.status === 'ready' && (
               <button onClick={() => withSave(() => deliverVehicle(v.id).then(() => toast.success('Marked as delivered!')))} className="btn-primary">
@@ -177,6 +192,14 @@ export default function VehicleDetail() {
           </div>
           {v.notes && (
             <p className="mt-4 text-sm text-gray-500 bg-gray-50 rounded-lg p-3 border-l-4 border-gray-200">{v.notes}</p>
+          )}
+          {v.workflow_state === 'rework' && (
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm font-semibold text-red-700">Rejected — Rework Required</p>
+              {v.rejection_reason && (
+                <p className="text-sm text-red-600 mt-1">Reason: {v.rejection_reason}</p>
+              )}
+            </div>
           )}
         </div>
 
@@ -335,6 +358,36 @@ export default function VehicleDetail() {
           onSave={async () => { await load(); closeModal(); }}
           onClose={closeModal}
         />
+      </Modal>
+
+      <Modal isOpen={modal === 'reject'} onClose={closeModal} title="Reject Vehicle — Send for Rework">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            This vehicle will be sent back to the Workshop Supervisor as a <span className="font-semibold text-red-600">Rework</span> job.
+          </p>
+          <div>
+            <label className="label">Rejection Reason *</label>
+            <textarea
+              className="input resize-none"
+              rows={3}
+              placeholder="Describe what needs to be reworked…"
+              onChange={e => setFormData({ reason: e.target.value })}
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={closeModal} className="btn-secondary">Cancel</button>
+            <button
+              disabled={saving || !formData.reason?.trim()}
+              onClick={() => withSave(async () => {
+                await rejectVehicle(v.id, { reason: formData.reason });
+                toast.success('Vehicle rejected — sent for rework');
+              })}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-all shadow-sm disabled:opacity-50"
+            >
+              {saving ? 'Rejecting…' : 'Confirm Rejection'}
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Job ETA Revision Modal (triggered from JobCard) */}

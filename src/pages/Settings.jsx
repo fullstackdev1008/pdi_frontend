@@ -9,7 +9,7 @@ const roleLabels = {
   admin: 'Administrator',
   sales_admin: 'Sales Manager',
   workshop_supervisor: 'Workshop Supervisor',
-  workshop_member: 'Workshop Member',
+  workshop_member: 'Technician',
 };
 
 export default function Settings() {

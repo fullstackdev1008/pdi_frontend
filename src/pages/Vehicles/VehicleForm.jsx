@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../../components/common/Modal';
 import { createVehicle, updateVehicle } from '../../api/vehicles';
+import { getUsers } from '../../api/users';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 export default function VehicleForm({ vehicle, onSuccess, onClose }) {
+  const { user } = useAuth();
   const isEdit = !!vehicle;
   const [loading, setLoading] = useState(false);
+  const [salesManagers, setSalesManagers] = useState([]);
   const [form, setForm] = useState({
     vin: vehicle?.vin || '',
     brand: vehicle?.brand || '',
@@ -14,6 +18,7 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
     year: vehicle?.year || new Date().getFullYear(),
     odometer: vehicle?.odometer || 0,
     eta: vehicle?.eta || '',
+    sales_admin_id: vehicle?.sales_admin_id || '',
     requires_body_building: vehicle?.requires_body_building === 1,
     requires_accessories: vehicle?.requires_accessories === 1,
     notes: vehicle?.notes || '',
@@ -21,8 +26,20 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
 
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
+  useEffect(() => {
+    if (!isEdit && user?.role === 'admin') {
+      getUsers({ role: 'sales_admin' })
+        .then(r => setSalesManagers(r.data))
+        .catch(() => {});
+    }
+  }, [isEdit, user]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isEdit && !form.sales_admin_id) {
+      toast.error('Please assign a Sales Manager');
+      return;
+    }
     setLoading(true);
     try {
       if (isEdit) {
@@ -119,6 +136,24 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
               <p className="text-xs text-gray-400 mt-1">Use "Revise ETA" on the vehicle detail page to update</p>
             )}
           </div>
+
+          {/* Sales Manager assignment — only when admin is creating */}
+          {!isEdit && user?.role === 'admin' && (
+            <div>
+              <label className="label">Assign to Sales Manager *</label>
+              <select
+                className="input"
+                value={form.sales_admin_id}
+                onChange={e => set('sales_admin_id', e.target.value)}
+                required
+              >
+                <option value="">Select Sales Manager…</option>
+                {salesManagers.map(m => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Checkboxes */}
