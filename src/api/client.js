@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const client = axios.create({
-  baseURL: 'https://pdi-backend-wheat.vercel.app/api',
+  baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -14,7 +14,8 @@ client.interceptors.request.use(config => {
 client.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    // Only force-redirect on 401 for authenticated routes, not the login endpoint itself
+    if (err.response?.status === 401 && !err.config?.url?.includes('/auth/login')) {
       localStorage.removeItem('pdi_token');
       localStorage.removeItem('pdi_user');
       window.location.href = '/login';

@@ -10,19 +10,22 @@ export default function Login() {
   const [password, setPassword] = useState('Sales@123');
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
       const res = await loginApi(email.trim(), password);
       login(res.data.token, res.data.user);
       toast.success(`Welcome, ${res.data.user.name}!`);
       navigate('/');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Login failed');
+      const msg = err.response?.data?.error || 'Invalid email or password. Please try again.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -84,6 +87,12 @@ export default function Login() {
                 </button>
               </div>
             </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 font-medium">
+                {error}
+              </div>
+            )}
 
             <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
               {loading ? 'Signing in…' : 'Sign In'}

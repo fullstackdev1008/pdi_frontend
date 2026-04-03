@@ -9,13 +9,23 @@ import { getDashboardSummary } from '../api/dashboard';
 import { format } from 'date-fns';
 
 const statusConfig = {
-  expected:      { label: 'Expected',    color: 'gray' },
-  received:      { label: 'Received',    color: 'teal' },
-  body_building: { label: 'Body Building', color: 'amber' },
-  in_workshop:   { label: 'In Workshop', color: 'amber' },
-  ready:         { label: 'Ready',       color: 'blue' },
-  delivered:     { label: 'Delivered',   color: 'green' },
+  expected:      { label: 'Expected',           color: 'gray'   },
+  received:      { label: 'Received',           color: 'teal'   },
+  body_building: { label: 'Body Building',      color: 'amber'  },
+  in_workshop:   { label: 'In Workshop',        color: 'amber'  },
+  pending_acceptance: { label: 'Pending Acceptance', color: 'orange' },
+  rework:        { label: 'Rework',             color: 'red'    },
+  ready:         { label: 'Ready',              color: 'blue'   },
+  delivered:     { label: 'Delivered',          color: 'green'  },
 };
+
+// Resolve the correct display status for a vehicle (mirrors backend computeStatus)
+function resolveStatus(v) {
+  if (v.status === 'delivered') return statusConfig.delivered;
+  if (v.workflow_state === 'rework') return statusConfig.rework;
+  if (v.status === 'ready') return statusConfig.ready;
+  return statusConfig[v.status] || { label: v.status, color: 'gray' };
+}
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -80,17 +90,24 @@ export default function Dashboard() {
                 onClick={() => navigate('/vehicles?status=expected')}
               />
               <StatsCard
+                label="Pending Acceptance"
+                value={stats?.pendingAcceptance || 0}
+                icon={Clock}
+                color="amber"
+              />
+              <StatsCard
+                label="Rework"
+                value={stats?.rework || 0}
+                icon={AlertTriangle}
+                color="red"
+                onClick={() => navigate('/vehicles?status=rework')}
+              />
+              <StatsCard
                 label="Delivered"
                 value={stats?.delivered || 0}
                 icon={Truck}
                 color="green"
                 onClick={() => navigate('/vehicles?status=delivered')}
-              />
-              <StatsCard
-                label="Delivered Today"
-                value={stats?.deliveredToday || 0}
-                icon={CheckCircle}
-                color="blue"
               />
             </div>
 
@@ -133,7 +150,7 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-400 text-center py-4">No vehicles yet</p>
                   )}
                   {data?.recentActivity?.map(v => {
-                    const sc = statusConfig[v.status] || { label: v.status, color: 'gray' };
+                    const sc = resolveStatus(v);
                     return (
                       <div
                         key={v.id}

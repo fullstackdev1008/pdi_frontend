@@ -51,6 +51,12 @@ export default function VehicleDetail() {
 
   const canSales = ['sales_admin', 'admin'].includes(user?.role);
   const canSupervisor = ['workshop_supervisor', 'admin'].includes(user?.role);
+  // For workshop_member, job interaction is only allowed on their own assigned jobs
+  const canInteractJob = (job) => {
+    if (['workshop_supervisor', 'admin'].includes(user?.role)) return true;
+    if (user?.role === 'workshop_member') return job.assigned_to === user.id;
+    return false;
+  };
   const canMember = ['workshop_member', 'workshop_supervisor', 'admin'].includes(user?.role);
 
   const load = async () => {
@@ -254,7 +260,7 @@ export default function VehicleDetail() {
                 key={job.id}
                 job={job}
                 vehicleId={v.id}
-                canMember={canMember}
+                canMember={canInteractJob(job)}
                 canSupervisor={canSupervisor}
                 onRefresh={load}
                 onReviseEta={() => openModal('jobEta', job)}
