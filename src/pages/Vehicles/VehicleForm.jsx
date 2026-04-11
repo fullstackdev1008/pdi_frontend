@@ -27,12 +27,12 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
   const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
   useEffect(() => {
-    if (!isEdit && user?.role === 'admin') {
+    if (user?.role === 'admin') {
       getUsers({ role: 'sales_admin' })
         .then(r => setSalesManagers(r.data))
         .catch(() => {});
     }
-  }, [isEdit, user]);
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -137,10 +137,10 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
             )}
           </div>
 
-          {/* Sales Manager assignment — only when admin is creating */}
-          {!isEdit && user?.role === 'admin' && (
+          {/* Sales Manager assignment — admin can assign on create or reassign on edit */}
+          {user?.role === 'admin' && (
             <div>
-              <label className="label">Assign to Sales Manager *</label>
+              <label className="label">{isEdit ? 'Reassign to Sales Manager' : 'Assign to Sales Manager *'}</label>
               <select
                 className="input"
                 value={form.sales_admin_id}

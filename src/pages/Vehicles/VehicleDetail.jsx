@@ -127,11 +127,6 @@ export default function VehicleDetail() {
                 <CheckCircle size={16} /> Mark Received
               </button>
             )}
-            {canSales && ['received', 'in_workshop'].includes(v.status) && !v.body_building && !v.workflow_state && (
-              <button onClick={() => openModal('bodyBuilding')} className="btn-secondary">
-                <Package size={16} /> Add Body Building
-              </button>
-            )}
             {/* Accept / Reject — shown when all jobs done, awaiting sales approval */}
             {canSales && ds.label === 'Pending Acceptance' && (
               <>
