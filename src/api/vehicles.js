@@ -16,6 +16,10 @@ export const addBodyBuilding = (id, data) => client.post(`/vehicles/${id}/body-b
 export const addBodyBuildingEta = (id, data) => client.post(`/vehicles/${id}/body-building/eta`, data);
 export const completeBodyBuilding = (id, data) => client.put(`/vehicles/${id}/body-building/complete`, data);
 
+export const addAccessoriesVendor = (id, data) => client.post(`/vehicles/${id}/accessories-vendor`, data);
+export const addAccessoriesVendorEta = (id, data) => client.post(`/vehicles/${id}/accessories-vendor/eta`, data);
+export const completeAccessoriesVendor = (id, data) => client.put(`/vehicles/${id}/accessories-vendor/complete`, data);
+
 export const getJobs = (vehicleId) => client.get(`/vehicles/${vehicleId}/jobs`);
 export const createJob = (vehicleId, data) => client.post(`/vehicles/${vehicleId}/jobs`, data);
 export const updateJob = (vehicleId, jobId, data) => client.put(`/vehicles/${vehicleId}/jobs/${jobId}`, data);

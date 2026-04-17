@@ -12,6 +12,7 @@ import {
   getVehicle, receiveVehicle, deliverVehicle,
   acceptVehicle, rejectVehicle,
   addVehicleEta, addBodyBuilding, addBodyBuildingEta, completeBodyBuilding,
+  addAccessoriesVendor, addAccessoriesVendorEta, completeAccessoriesVendor,
   createJob, completeJob, addJobEta,
   addChecklistItem, toggleChecklistItem, deleteChecklistItem
 } from '../../api/vehicles';
@@ -127,6 +128,16 @@ export default function VehicleDetail() {
                 <CheckCircle size={16} /> Mark Received
               </button>
             )}
+            {canSales && v.requires_body_building == 1 && !v.body_building && !v.workflow_state && !['expected','delivered'].includes(v.status) && (
+              <button onClick={() => openModal('bodyBuilding')} className="btn-secondary">
+                <Package size={16} /> Add Body Building
+              </button>
+            )}
+            {canSales && v.requires_accessories == 1 && !v.accessories_vendor && !v.workflow_state && !['expected','delivered'].includes(v.status) && (
+              <button onClick={() => openModal('accessoriesVendor')} className="btn-secondary">
+                <Wrench size={16} /> Add Accessories Vendor
+              </button>
+            )}
             {/* Accept / Reject — shown when all jobs done, awaiting sales approval */}
             {canSales && ds.label === 'Pending Acceptance' && (
               <>
@@ -226,7 +237,7 @@ export default function VehicleDetail() {
             />
 
             {/* Stage 2: Body Building (if required) */}
-            {(v.requires_body_building || v.body_building) && (
+            {(v.requires_body_building == 1 || v.body_building) && (
               <TimelineStage
                 icon={Package}
                 title="Body Building"
@@ -249,7 +260,31 @@ export default function VehicleDetail() {
               />
             )}
 
-            {/* Stage 3: Workshop Jobs — inline checklist cards */}
+            {/* Stage 3: Accessories Vendor (if required) */}
+            {(v.requires_accessories == 1 || v.accessories_vendor) && (
+              <TimelineStage
+                icon={Wrench}
+                title="Accessories Fitment"
+                subtitle={v.accessories_vendor ? `Vendor: ${v.accessories_vendor.vendor_name}` : 'Not started'}
+                status={!v.accessories_vendor ? 'gray'
+                  : v.accessories_vendor.actual_completion_date ? 'green'
+                  : etaColor(v.accessories_vendor.eta, false)}
+                statusLabel={
+                  !v.accessories_vendor ? 'Not assigned' :
+                  v.accessories_vendor.actual_completion_date
+                    ? `Completed ${format(new Date(v.accessories_vendor.actual_completion_date), 'dd MMM yyyy')}`
+                    : `ETA: ${format(new Date(v.accessories_vendor.eta), 'dd MMM yyyy')}`
+                }
+                actions={canSales && v.accessories_vendor && !v.accessories_vendor.actual_completion_date ? [
+                  { label: 'Revise ETA', onClick: () => openModal('avEta') },
+                  { label: 'Mark Complete', onClick: () => openModal('avComplete') },
+                ] : []}
+                etaHistory={v.accessories_vendor?.eta_history}
+                isLast={!v.jobs || v.jobs.length === 0}
+              />
+            )}
+
+            {/* Stage 4: Workshop Jobs — inline checklist cards */}
             {v.jobs?.map((job, idx) => (
               <JobCard
                 key={job.id}
@@ -344,6 +379,60 @@ export default function VehicleDetail() {
             <button disabled={saving} onClick={() => withSave(async () => {
               await completeBodyBuilding(v.id, { actual_completion_date: formData.date || today });
               toast.success('Body building marked complete');
+            })} className="btn-primary">
+              {saving ? 'Saving…' : 'Mark Complete'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={modal === 'accessoriesVendor'} onClose={closeModal} title="Add Accessories Vendor">
+        <div className="space-y-4">
+          <div>
+            <label className="label">Vendor Name *</label>
+            <input className="input" placeholder="e.g. Auto Accessories Co."
+              onChange={e => setFormData(p => ({ ...p, vendor_name: e.target.value }))} />
+          </div>
+          <div>
+            <label className="label">Expected Completion Date (ETA) *</label>
+            <input type="date" className="input"
+              onChange={e => setFormData(p => ({ ...p, eta: e.target.value }))} />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={closeModal} className="btn-secondary">Cancel</button>
+            <button disabled={saving} onClick={() => withSave(async () => {
+              if (!formData.vendor_name || !formData.eta) throw new Error('All fields required');
+              await addAccessoriesVendor(v.id, formData);
+              toast.success('Accessories vendor added');
+            })} className="btn-primary">
+              {saving ? 'Saving…' : 'Add Accessories Vendor'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={modal === 'avEta'} onClose={closeModal} title="Revise Accessories ETA">
+        <EtaForm saving={saving}
+          onSubmit={({ eta, remarks }) => withSave(async () => {
+            await addAccessoriesVendorEta(v.id, { eta, remarks });
+            toast.success('Accessories ETA updated');
+          })}
+          onClose={closeModal}
+        />
+      </Modal>
+
+      <Modal isOpen={modal === 'avComplete'} onClose={closeModal} title="Complete Accessories Fitment">
+        <div className="space-y-4">
+          <div>
+            <label className="label">Actual Completion Date</label>
+            <input type="date" className="input" defaultValue={today}
+              onChange={e => setFormData({ date: e.target.value })} />
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={closeModal} className="btn-secondary">Cancel</button>
+            <button disabled={saving} onClick={() => withSave(async () => {
+              await completeAccessoriesVendor(v.id, { actual_completion_date: formData.date || today });
+              toast.success('Accessories fitment marked complete');
             })} className="btn-primary">
               {saving ? 'Saving…' : 'Mark Complete'}
             </button>
