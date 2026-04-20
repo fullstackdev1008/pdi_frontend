@@ -5,7 +5,6 @@ export default function LoadingSpinner({ fullscreen = false, size = 'md' }) {
     <div className={`${sizes[size]} border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin`} />
   );
 
-  
   if (fullscreen) {
     return (
       <div className="flex items-center justify-center h-full min-h-64">

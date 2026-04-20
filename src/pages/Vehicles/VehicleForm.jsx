@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Modal from '../../components/common/Modal';
-import { createVehicle, updateVehicle } from '../../api/vehicles';
+import { createVehicle, updateVehicle, addBodyBuilding, updateBodyBuilding } from '../../api/vehicles';
 import { getUsers } from '../../api/users';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -19,8 +19,10 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
     odometer: vehicle?.odometer || 0,
     eta: vehicle?.eta || '',
     sales_admin_id: vehicle?.sales_admin_id || '',
-    requires_body_building: vehicle?.requires_body_building === 1,
-    requires_accessories: vehicle?.requires_accessories === 1,
+    requires_body_building: vehicle?.requires_body_building == 1,
+    bb_vendor_name: vehicle?.body_building?.vendor_name || '',
+    bb_eta: vehicle?.body_building?.eta || '',
+    requires_accessories: vehicle?.requires_accessories == 1,
     notes: vehicle?.notes || '',
   });
 
@@ -36,17 +38,42 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isEdit && !form.sales_admin_id) {
+    if (!isEdit && user?.role === 'admin' && !form.sales_admin_id) {
       toast.error('Please assign a Sales Manager');
+      return;
+    }
+    if (form.requires_body_building && (!form.bb_vendor_name.trim() || !form.bb_eta)) {
+      toast.error('Body Building vendor name and ETA are required');
       return;
     }
     setLoading(true);
     try {
       if (isEdit) {
         await updateVehicle(vehicle.id, form);
+        if (form.requires_body_building && form.bb_vendor_name && form.bb_eta) {
+          if (vehicle.body_building) {
+            // Update existing BB record
+            await updateBodyBuilding(vehicle.id, {
+              vendor_name: form.bb_vendor_name.trim(),
+              eta: form.bb_eta,
+            });
+          } else {
+            // Create new BB record (sales just checked the box)
+            await addBodyBuilding(vehicle.id, {
+              vendor_name: form.bb_vendor_name.trim(),
+              eta: form.bb_eta,
+            });
+          }
+        }
         toast.success('Vehicle updated');
       } else {
-        await createVehicle(form);
+        const res = await createVehicle(form);
+        if (form.requires_body_building && form.bb_vendor_name && form.bb_eta) {
+          await addBodyBuilding(res.data.id, {
+            vendor_name: form.bb_vendor_name.trim(),
+            eta: form.bb_eta,
+          });
+        }
         toast.success('Vehicle added successfully');
       }
       onSuccess();
@@ -137,7 +164,7 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
             )}
           </div>
 
-          {/* Sales Manager assignment — admin can assign on create or reassign on edit */}
+          {/* Sales Manager assignment — admin only */}
           {user?.role === 'admin' && (
             <div>
               <label className="label">{isEdit ? 'Reassign to Sales Manager' : 'Assign to Sales Manager *'}</label>
@@ -145,7 +172,7 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
                 className="input"
                 value={form.sales_admin_id}
                 onChange={e => set('sales_admin_id', e.target.value)}
-                required
+                required={!isEdit}
               >
                 <option value="">Select Sales Manager…</option>
                 {salesManagers.map(m => (
@@ -157,16 +184,48 @@ export default function VehicleForm({ vehicle, onSuccess, onClose }) {
         </div>
 
         {/* Checkboxes */}
-        <div className="flex flex-wrap gap-4 pt-1">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              className="w-4 h-4 rounded accent-brand-500"
-              checked={form.requires_body_building}
-              onChange={e => set('requires_body_building', e.target.checked)}
-            />
-            <span className="text-sm text-gray-700">Requires Body Building</span>
-          </label>
+        <div className="space-y-3 pt-1">
+          {/* Body Building */}
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded accent-brand-500"
+                checked={form.requires_body_building}
+                onChange={e => set('requires_body_building', e.target.checked)}
+              />
+              <span className="text-sm text-gray-700">Requires Body Building</span>
+            </label>
+            {form.requires_body_building && (
+              <div className="mt-3 ml-6 grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                <div>
+                  <label className="label">BB Vendor Name *</label>
+                  <input
+                    className="input"
+                    placeholder="e.g. Premier Body Works"
+                    value={form.bb_vendor_name}
+                    onChange={e => set('bb_vendor_name', e.target.value)}
+                    required={form.requires_body_building}
+                  />
+                </div>
+                <div>
+                  <label className="label">BB Expected Completion (ETA) *</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={form.bb_eta}
+                    onChange={e => set('bb_eta', e.target.value)}
+                    required={form.requires_body_building}
+                  />
+                </div>
+                {isEdit && vehicle?.body_building && (
+                  <p className="col-span-2 text-xs text-gray-400">Editing existing body building vendor details.</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Accessories */}
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"

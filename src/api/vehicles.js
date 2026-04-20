@@ -13,6 +13,7 @@ export const rejectVehicle = (id, data) => client.put(`/vehicles/${id}/reject`, 
 export const deliverVehicle = (id) => client.put(`/vehicles/${id}/deliver`);
 
 export const addBodyBuilding = (id, data) => client.post(`/vehicles/${id}/body-building`, data);
+export const updateBodyBuilding = (id, data) => client.put(`/vehicles/${id}/body-building`, data);
 export const addBodyBuildingEta = (id, data) => client.post(`/vehicles/${id}/body-building/eta`, data);
 export const completeBodyBuilding = (id, data) => client.put(`/vehicles/${id}/body-building/complete`, data);
 

@@ -123,19 +123,9 @@ export default function VehicleDetail() {
             <ArrowLeft size={16} /> Back
           </button>
           <div className="flex gap-2 flex-wrap">
-            {canSales && v.status === 'expected' && (
+            {canSales && !v.actual_arrival_date && !['delivered'].includes(v.status) && (
               <button onClick={() => openModal('receive')} className="btn-primary">
                 <CheckCircle size={16} /> Mark Received
-              </button>
-            )}
-            {canSales && v.requires_body_building == 1 && !v.body_building && !v.workflow_state && !['expected','delivered'].includes(v.status) && (
-              <button onClick={() => openModal('bodyBuilding')} className="btn-secondary">
-                <Package size={16} /> Add Body Building
-              </button>
-            )}
-            {canSales && v.requires_accessories == 1 && !v.accessories_vendor && !v.workflow_state && !['expected','delivered'].includes(v.status) && (
-              <button onClick={() => openModal('accessoriesVendor')} className="btn-secondary">
-                <Wrench size={16} /> Add Accessories Vendor
               </button>
             )}
             {/* Accept / Reject — shown when all jobs done, awaiting sales approval */}
@@ -256,30 +246,6 @@ export default function VehicleDetail() {
                   { label: 'Mark Complete', onClick: () => openModal('bbComplete') },
                 ] : []}
                 etaHistory={v.body_building?.eta_history}
-                isLast={!v.jobs || v.jobs.length === 0}
-              />
-            )}
-
-            {/* Stage 3: Accessories Vendor (if required) */}
-            {(v.requires_accessories == 1 || v.accessories_vendor) && (
-              <TimelineStage
-                icon={Wrench}
-                title="Accessories Fitment"
-                subtitle={v.accessories_vendor ? `Vendor: ${v.accessories_vendor.vendor_name}` : 'Not started'}
-                status={!v.accessories_vendor ? 'gray'
-                  : v.accessories_vendor.actual_completion_date ? 'green'
-                  : etaColor(v.accessories_vendor.eta, false)}
-                statusLabel={
-                  !v.accessories_vendor ? 'Not assigned' :
-                  v.accessories_vendor.actual_completion_date
-                    ? `Completed ${format(new Date(v.accessories_vendor.actual_completion_date), 'dd MMM yyyy')}`
-                    : `ETA: ${format(new Date(v.accessories_vendor.eta), 'dd MMM yyyy')}`
-                }
-                actions={canSales && v.accessories_vendor && !v.accessories_vendor.actual_completion_date ? [
-                  { label: 'Revise ETA', onClick: () => openModal('avEta') },
-                  { label: 'Mark Complete', onClick: () => openModal('avComplete') },
-                ] : []}
-                etaHistory={v.accessories_vendor?.eta_history}
                 isLast={!v.jobs || v.jobs.length === 0}
               />
             )}

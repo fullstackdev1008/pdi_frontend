@@ -6,7 +6,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import StatsCard from '../../components/common/StatsCard';
 import Pagination from '../../components/common/Pagination';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { getVehicles, deleteVehicle } from '../../api/vehicles';
+import { getVehicles, getVehicle, deleteVehicle } from '../../api/vehicles';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -186,7 +186,7 @@ export default function VehicleList() {
                         activeMenu={activeMenu}
                         setActiveMenu={setActiveMenu}
                         onView={() => navigate(`/vehicles/${v.id}`)}
-                        onEdit={() => { setEditVehicle(v); setShowForm(true); }}
+                        onEdit={async () => { const r = await getVehicle(v.id); setEditVehicle(r.data); setShowForm(true); }}
                         onDelete={() => handleDelete(v.id)}
                       />
                     ))}
